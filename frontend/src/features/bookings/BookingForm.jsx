@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import Button from '../../components/common/Button'
 import Input from '../../components/common/Input'
+import Alert from '../../components/common/Alert'
 import { useAuth } from '../auth/AuthContext'
 import { useBookings } from './BookingContext'
 
@@ -204,7 +205,7 @@ export default function BookingForm() {
         <p className="slot-help">Hệ thống hỗ trợ đặt tối thiểu 1 giờ, tối đa 8 giờ và tự động chặn các giờ trùng lịch.</p>
       </div>
       
-      {apiError ? <p className="error banner-error">{apiError}</p> : null}
+      <Alert message={apiError} type="error" onClose={() => setApiError('')} />
       <Button type="submit" disabled={!canSubmit || isSubmitting}>
         {isSubmitting ? 'Đang đặt...' : 'Đặt phòng'}
       </Button>

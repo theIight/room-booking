@@ -1,9 +1,10 @@
 import BookingForm from './BookingForm'
 import BookingList from './BookingList'
+import Alert from '../../components/common/Alert'
 import { useBookings } from './BookingContext'
 
 export default function RoomDashboard() {
-  const { selectedRoom, loading, error } = useBookings()
+  const { selectedRoom, loading, error, setError } = useBookings()
 
   if (!selectedRoom) {
     return <div className="panel-card">Chưa có phòng nào để đặt.</div>
@@ -19,7 +20,7 @@ export default function RoomDashboard() {
         </div>
         <span className="capacity-pill">{selectedRoom.capacity} chỗ</span>
       </header>
-      {error ? <p className="error banner-error">{error}</p> : null}
+      <Alert message={error} type="error" onClose={() => setError('')} />
       <BookingForm />
       <section className="bookings-section">
         <div className="section-heading">

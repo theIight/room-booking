@@ -62,7 +62,6 @@ export function BookingProvider({ children }) {
     } catch (requestError) {
       const message = requestError.response?.data?.message || 'Không thể xóa lịch đặt.'
       setError(message)
-      alert(message)
     }
   }
 
@@ -83,6 +82,7 @@ export function BookingProvider({ children }) {
     bookings,
     loading,
     error,
+    setError,
     fetchRooms,
     fetchBookings,
     createBooking,

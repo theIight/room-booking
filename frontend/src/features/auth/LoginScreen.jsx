@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import Button from '../../components/common/Button'
 import Input from '../../components/common/Input'
+import Alert from '../../components/common/Alert'
 import { useAuth } from './AuthContext'
 
 export default function LoginScreen() {
@@ -40,7 +41,7 @@ export default function LoginScreen() {
               pattern: { value: /^0[0-9]{9}$/, message: 'Số điện thoại phải gồm 10 số và bắt đầu bằng 0' },
             })}
           />
-          {apiError ? <p className="error banner-error">{apiError}</p> : null}
+          <Alert message={apiError} type="error" onClose={() => setApiError('')} />
           <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Đang vào...' : 'Tiếp tục'}</Button>
         </form>
         <aside className="login-art" aria-hidden="true">
