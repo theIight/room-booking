@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
 import Button from '../../components/common/Button'
 import Input from '../../components/common/Input'
 import { useAuth } from '../auth/AuthContext'
@@ -42,11 +43,20 @@ export default function BookingForm() {
   const { username } = useAuth()
   const { selectedRoom, bookings, createBooking } = useBookings()
   const [apiError, setApiError] = useState('')
-  const [selectedDate, setSelectedDate] = useState(dateInputValue())
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const today = dateInputValue()
+
+  const { register, handleSubmit, watch, setValue, clearErrors, formState: { errors } } = useForm({
+    defaultValues: {
+      date: today,
+      startTime: '',
+      endTime: '',
+    }
+  })
+
+  const selectedDate = watch('date')
+  const startTime = watch('startTime')
+  const endTime = watch('endTime')
 
   const parsedBookings = useMemo(() => {
     return bookings.map((booking) => ({
@@ -56,6 +66,7 @@ export default function BookingForm() {
   }, [bookings])
 
   const validStartTimes = useMemo(() => {
+    if (!selectedDate) return []
     const now = new Date()
     return START_TIMES.filter((timeStr) => {
       const S = timeToDate(selectedDate, timeStr)
@@ -70,7 +81,7 @@ export default function BookingForm() {
   }, [selectedDate, parsedBookings])
 
   const validEndTimes = useMemo(() => {
-    if (!startTime) return []
+    if (!selectedDate || !startTime) return []
 
     const S = timeToDate(selectedDate, startTime)
     const minEnd = new Date(S.getTime() + 60 * 60 * 1000)
@@ -92,42 +103,28 @@ export default function BookingForm() {
   }, [startTime, selectedDate, parsedBookings])
 
   useEffect(() => {
-    setStartTime('')
-    setEndTime('')
+    setValue('startTime', '')
+    setValue('endTime', '')
     setApiError('')
-  }, [selectedRoom, selectedDate])
+    clearErrors()
+  }, [selectedRoom, selectedDate, setValue, clearErrors])
 
-  const selectedStart = startTime ? timeToDate(selectedDate, startTime) : null
-  const selectedEnd = endTime ? timeToDate(selectedDate, endTime) : null
-  const canSubmit = selectedRoom && startTime && endTime && !isSubmitting
+  const selectedStart = startTime && selectedDate ? timeToDate(selectedDate, startTime) : null
+  const selectedEnd = endTime && selectedDate ? timeToDate(selectedDate, endTime) : null
+  const canSubmit = selectedRoom && !isSubmitting
 
-  function resetSelection() {
-    setStartTime('')
-    setEndTime('')
+  async function onSubmit(data) {
     setApiError('')
-  }
-
-  function handleDateChange(event) {
-    setSelectedDate(event.target.value)
-    resetSelection()
-  }
-
-  async function onSubmit(event) {
-    event.preventDefault()
-    setApiError('')
-
-    if (!canSubmit) {
-      setApiError('Vui lòng chọn đầy đủ thông tin đặt phòng họp.')
-      return
-    }
-
     setIsSubmitting(true)
     try {
+      const start = timeToDate(data.date, data.startTime)
+      const end = timeToDate(data.date, data.endTime)
       await createBooking({
-        start_time: selectedStart,
-        end_time: selectedEnd,
+        start_time: start,
+        end_time: end,
       })
-      resetSelection()
+      setValue('startTime', '')
+      setValue('endTime', '')
     } catch (error) {
       const errorsBag = error.response?.data?.errors
       const firstError = errorsBag ? Object.values(errorsBag).flat()[0] : null
@@ -138,7 +135,7 @@ export default function BookingForm() {
   }
 
   return (
-    <form className="booking-form schedule-form" onSubmit={onSubmit}>
+    <form className="booking-form schedule-form" onSubmit={handleSubmit(onSubmit)}>
       <div className="booking-person">
         <p className="eyebrow">Booking as</p>
         <strong>{username}</strong>
@@ -147,8 +144,8 @@ export default function BookingForm() {
         label="Ngày đặt"
         type="date"
         min={today}
-        value={selectedDate}
-        onChange={handleDateChange}
+        error={errors.date?.message}
+        {...register('date', { required: 'Vui lòng chọn ngày đặt.' })}
       />
       <div className="schedule-summary">
         <span>Bắt đầu</span>
@@ -169,12 +166,14 @@ export default function BookingForm() {
           <label className="field">
             <span>Giờ bắt đầu</span>
             <select
-              value={startTime}
-              onChange={(e) => {
-                setStartTime(e.target.value)
-                setEndTime('')
-                setApiError('')
-              }}
+              {...register('startTime', {
+                required: 'Vui lòng chọn giờ bắt đầu.',
+                onChange: () => {
+                  setValue('endTime', '')
+                  setApiError('')
+                  clearErrors('endTime')
+                }
+              })}
             >
               <option value="">-- Chọn giờ bắt đầu --</option>
               {validStartTimes.map((time) => (
@@ -183,17 +182,14 @@ export default function BookingForm() {
                 </option>
               ))}
             </select>
+            {errors.startTime?.message ? <small className="error">{errors.startTime.message}</small> : null}
           </label>
 
           <label className="field">
             <span>Giờ kết thúc</span>
             <select
-              value={endTime}
-              onChange={(e) => {
-                setEndTime(e.target.value)
-                setApiError('')
-              }}
               disabled={!startTime}
+              {...register('endTime', { required: 'Vui lòng chọn giờ kết thúc.' })}
             >
               <option value="">-- Chọn giờ kết thúc --</option>
               {validEndTimes.map((time) => (
@@ -202,6 +198,7 @@ export default function BookingForm() {
                 </option>
               ))}
             </select>
+            {errors.endTime?.message ? <small className="error">{errors.endTime.message}</small> : null}
           </label>
         </div>
         <p className="slot-help">Hệ thống hỗ trợ đặt tối thiểu 1 giờ, tối đa 8 giờ và tự động chặn các giờ trùng lịch.</p>
